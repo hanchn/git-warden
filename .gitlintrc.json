@@ -4,8 +4,8 @@
   "allowedTypes": ["feat", "fix", "docs", "test", "refactor", "chore"],
   "branches": {
     "main": "^master$",
-    "test": "^test(\\/.*)?$", 
-    "pre": "^pre(\\/.*)?$", 
+    "test": "^test(\\/.*)?$",
+    "pre": "^pre(\\/.*)?$",
     "dev": "^dev\\/.+$"
   },
   "restrictMerge": [
