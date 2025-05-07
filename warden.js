@@ -1,114 +1,87 @@
-#!/usr/bin/env node
-
 import fs from 'fs';
 import { execSync } from 'child_process';
+import path from 'path';
 
-const defaultConfig = {
-  forceCommitFormat: true,
-  commitFormat: "<type>(<scope>): <subject>",
-  allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore"],
-  branches: {
-    main: "^master$",
-    test: "^test(\\/.*)?$",
-    pre: "^pre(\\/.*)?$",
-    dev: "^dev\\/.+$" // 禁止裸 dev
-  },
-  restrictMerge: [
-    { from: "^test(\\/.*)?$", to: "^master$" },
-    { from: "^pre(\\/.*)?$", to: "^master$" },
-    { from: "^dev\\/.+$", to: "^master$" }
-  ],
-  messages: {
-    emptyCommit: "commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
-    badFormat: "commit 信息格式错误，必须符合格式：<type>(<scope>): <subject>",
-    badType: "commit 类型不在允许范围内，请使用以下类型之一：",
-    badBranch: "当前分支不符合命名规范，具体规范如下：",
-    badMerge: "禁止将该分支合并到目标分支，请检查合并策略"
-  }
-};
+const huskyDir = '.husky';
+const hooks = ['commit-msg', 'pre-push'];
+const hookCommand = 'node warden.js';
+const defaultConfigPath = '.gitlintrc.json';
 
-let config = defaultConfig;
-if (fs.existsSync('.gitlintrc.json')) {
-  const userConfig = JSON.parse(fs.readFileSync('.gitlintrc.json', 'utf8'));
-  config = { ...defaultConfig, ...userConfig };
+function log(msg) {
+  console.log(`🛠 ${msg}`);
 }
 
-const getCurrentBranch = () => {
-  return execSync('git symbolic-ref --short HEAD').toString().trim();
-};
-
-const getLastCommitMessage = () => {
-  try {
-    return execSync('git log -1 --pretty=%B').toString().trim();
-  } catch {
-    console.warn('⚠️ 当前分支尚无提交，跳过 commit message 校验');
-    return '';
+// 1. 初始化 husky
+function initHusky() {
+  if (!fs.existsSync(huskyDir)) {
+    log('初始化 Husky...');
+    execSync('npx husky install', { stdio: 'inherit' });
+  } else {
+    log('已存在 .husky 目录，跳过初始化');
   }
-};
+}
 
-const validateBranchName = (branch) => {
-  const match = Object.entries(config.branches).some(([_, pattern]) => {
-    return new RegExp(pattern).test(branch);
-  });
+// 2. 添加指定 hook 并写入命令（去重）
+function addHook(name) {
+  const hookPath = path.join(huskyDir, name);
+  const huskyHeader = '. "$(dirname "$0")/_/husky.sh"';
 
-  if (!match) {
-    const rules = Object.entries(config.branches)
-      .map(([name, pattern]) => `${name} 分支应匹配正则：${pattern}`)
-      .join('\n');
-    console.error(`❌ ${config.messages.badBranch}\n${rules}`);
-    process.exit(1);
-  }
-};
-
-const validateCommitMessage = (msg) => {
-  if (!config.forceCommitFormat || !msg) return;
-
-  if (!msg.trim() || /^[^a-zA-Z0-9\u4e00-\u9fa5]+$/.test(msg)) {
-    console.error(`❌ ${config.messages.emptyCommit}`);
-    process.exit(1);
+  if (!fs.existsSync(hookPath)) {
+    execSync(`npx husky add ${hookPath} ""`, { stdio: 'inherit' });
   }
 
-  const regex = /^(\w+)(\(\w+\))?: .+/;
-  if (!regex.test(msg)) {
-    console.error(`❌ ${config.messages.badFormat}`);
-    process.exit(1);
+  let content = fs.readFileSync(hookPath, 'utf8');
+
+  if (!content.includes(huskyHeader)) {
+    content = `#!/bin/sh\n${huskyHeader}\n`;
   }
 
-  const type = msg.split('(')[0];
-  if (!config.allowedTypes.includes(type)) {
-    console.error(`❌ ${config.messages.badType}${config.allowedTypes.join('、')}`);
-    process.exit(1);
+  if (!content.includes(hookCommand)) {
+    content += `\n${hookCommand}\n`;
+    fs.writeFileSync(hookPath, content, { mode: 0o755 });
+    log(`添加钩子：${name}`);
+  } else {
+    log(`钩子 ${name} 已包含 warden.js 调用，跳过`);
   }
-};
+}
 
-const validateMergeRules = () => {
-  try {
-    const output = execSync('git log -1 --merges --pretty=%P').toString().trim();
-    if (!output) return;
+// 3. 生成默认配置文件（如不存在）
+function generateConfig() {
+  if (fs.existsSync(defaultConfigPath)) {
+    log(`${defaultConfigPath} 已存在，跳过生成`);
+    return;
+  }
 
-    const [from, to] = output.split(' ');
-    if (!from || !to) return;
-
-    for (const rule of config.restrictMerge) {
-      const fromMatch = new RegExp(rule.from).test(from);
-      const toMatch = new RegExp(rule.to).test(to);
-      if (fromMatch && toMatch) {
-        console.error(`❌ ${config.messages.badMerge}`);
-        process.exit(1);
-      }
+  const config = {
+    forceCommitFormat: true,
+    commitFormat: "<type>(<scope>): <subject>",
+    allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore"],
+    branches: {
+      main: "^master$",
+      test: "^test(\\/.*)?$",
+      pre: "^pre(\\/.*)?$",
+      dev: "^dev\\/.+$"
+    },
+    restrictMerge: [
+      { from: "^test(\\/.*)?$", to: "^master$" },
+      { from: "^pre(\\/.*)?$", to: "^master$" },
+      { from: "^dev\\/.+$", to: "^master$" }
+    ],
+    messages: {
+      emptyCommit: "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
+      badFormat: "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject>",
+      badType: "❌ commit 类型不在允许范围内，请使用以下类型之一：",
+      badBranch: "❌ 当前分支不符合命名规范，具体规范如下：",
+      badMerge: "❌ 禁止将该分支合并到目标分支，请检查合并策略"
     }
-  } catch {}
-};
+  };
 
-const runChecks = () => {
-  const branch = getCurrentBranch();
-  const commitMsg = getLastCommitMessage();
+  fs.writeFileSync(defaultConfigPath, JSON.stringify(config, null, 2));
+  log(`生成默认配置文件：${defaultConfigPath}`);
+}
 
-  validateBranchName(branch);
-  validateCommitMessage(commitMsg);
-  validateMergeRules();
-
-  console.log("✅ Git 校验通过");
-};
-
-runChecks();
+// 执行流程
+initHusky();
+hooks.forEach(addHook);
+generateConfig();
+log('✅ Git Warden 初始化完成');
