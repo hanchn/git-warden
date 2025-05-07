@@ -17,9 +17,7 @@
     "dev": "^dev(\/.*)?$|^dev$"
   },
   "restrictMerge": [
-    { "from": "^test(\/.*)?$|^test$", "to": "^master$" },
-    { "from": "^pre(\/.*)?$|^pre$", "to": "^master$" },
-    { "from": "^dev(\/.*)?$|^dev$", "to": "^master$" }
+    { "from": "^(?!pre(\\/.*)?$|pre$).*", "to": "^master$" }
   ],
   "messages": {
     "emptyCommit": "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",

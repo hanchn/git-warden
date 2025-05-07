@@ -88,21 +88,24 @@ const validateCommitMessage = (msg) => {
 
 const validateMergeRules = () => {
   try {
-    const output = execSync('git log -1 --merges --pretty=%P').toString().trim();
-    if (!output) return;
+    const targetBranch = getCurrentBranch();
+    const mergeHeadPath = '.git/MERGE_HEAD';
+    if (fs.existsSync(mergeHeadPath)) {
+      const fromCommit = fs.readFileSync(mergeHeadPath, 'utf8').trim();
+      const fromBranchName = execSync(`git name-rev --name-only ${fromCommit}`).toString().trim();
 
-    const [from, to] = output.split(' ');
-    if (!from || !to) return;
-
-    for (const rule of config.restrictMerge) {
-      const fromMatch = new RegExp(rule.from).test(from);
-      const toMatch = new RegExp(rule.to).test(to);
-      if (fromMatch && toMatch) {
-        console.error(`❌ ${config.messages.badMerge}`);
-        process.exit(1);
+      for (const rule of config.restrictMerge) {
+        const fromMatch = new RegExp(rule.from).test(fromBranchName);
+        const toMatch = new RegExp(rule.to).test(targetBranch);
+        if (fromMatch && toMatch) {
+          console.error(`❌ ${config.messages.badMerge}\\n禁止从 ${fromBranchName} 合并到 ${targetBranch}`);
+          process.exit(1);
+        }
       }
     }
-  } catch {}
+  } catch (e) {
+    console.warn('⚠️ 合并检测失败:', e.message);
+  }
 };
 
 const promptCommit = async () => {
