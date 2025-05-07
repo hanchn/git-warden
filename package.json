@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "warden": "node warden.js"
+    "warden": "node warden.js",
+    "prepare": "husky install"
   },
   "author": "",
   "license": "ISC",
