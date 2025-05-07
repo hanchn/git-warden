@@ -3,34 +3,40 @@
 import fs from 'fs';
 import { execSync } from 'child_process';
 
-// 默认配置
 const defaultConfig = {
   forceCommitFormat: true,
   commitFormat: "<type>(<scope>): <subject>",
   allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore"],
   branches: {
     main: "^master$",
-    test: "^test\\/.*$",
-    pre: "^release\\/.*$"
+    test: "^test(\\/.*)?$",
+    pre: "^pre(\\/.*)?$",
+    dev: "^dev\\/.+$" // 禁止裸 dev
   },
   restrictMerge: [
-    { from: "^test\\/.*$", to: "^master$" }
-  ]
+    { from: "^test(\\/.*)?$", to: "^master$" },
+    { from: "^pre(\\/.*)?$", to: "^master$" },
+    { from: "^dev\\/.+$", to: "^master$" }
+  ],
+  messages: {
+    emptyCommit: "commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
+    badFormat: "commit 信息格式错误，必须符合格式：<type>(<scope>): <subject>",
+    badType: "commit 类型不在允许范围内，请使用以下类型之一：",
+    badBranch: "当前分支不符合命名规范，具体规范如下：",
+    badMerge: "禁止将该分支合并到目标分支，请检查合并策略"
+  }
 };
 
-// 加载用户配置（如存在 .gitlintrc.json）
 let config = defaultConfig;
 if (fs.existsSync('.gitlintrc.json')) {
   const userConfig = JSON.parse(fs.readFileSync('.gitlintrc.json', 'utf8'));
   config = { ...defaultConfig, ...userConfig };
 }
 
-// 获取当前分支名
 const getCurrentBranch = () => {
   return execSync('git symbolic-ref --short HEAD').toString().trim();
 };
 
-// 获取最近一次提交信息
 const getLastCommitMessage = () => {
   try {
     return execSync('git log -1 --pretty=%B').toString().trim();
@@ -40,33 +46,41 @@ const getLastCommitMessage = () => {
   }
 };
 
-// 校验分支名
 const validateBranchName = (branch) => {
-  const valid = Object.values(config.branches).some(pattern => new RegExp(pattern).test(branch));
-  if (!valid) {
-    console.error(`❌ 当前分支 "${branch}" 不符合命名规范`);
+  const match = Object.entries(config.branches).some(([_, pattern]) => {
+    return new RegExp(pattern).test(branch);
+  });
+
+  if (!match) {
+    const rules = Object.entries(config.branches)
+      .map(([name, pattern]) => `${name} 分支应匹配正则：${pattern}`)
+      .join('\n');
+    console.error(`❌ ${config.messages.badBranch}\n${rules}`);
     process.exit(1);
   }
 };
 
-// 校验 commit 格式
 const validateCommitMessage = (msg) => {
   if (!config.forceCommitFormat || !msg) return;
 
+  if (!msg.trim() || /^[^a-zA-Z0-9\u4e00-\u9fa5]+$/.test(msg)) {
+    console.error(`❌ ${config.messages.emptyCommit}`);
+    process.exit(1);
+  }
+
   const regex = /^(\w+)(\(\w+\))?: .+/;
   if (!regex.test(msg)) {
-    console.error(`❌ commit 格式不正确，应为：${config.commitFormat}`);
+    console.error(`❌ ${config.messages.badFormat}`);
     process.exit(1);
   }
 
   const type = msg.split('(')[0];
   if (!config.allowedTypes.includes(type)) {
-    console.error(`❌ commit type "${type}" 不在允许列表中：${config.allowedTypes.join(', ')}`);
+    console.error(`❌ ${config.messages.badType}${config.allowedTypes.join('、')}`);
     process.exit(1);
   }
 };
 
-// 校验合并规则
 const validateMergeRules = () => {
   try {
     const output = execSync('git log -1 --merges --pretty=%P').toString().trim();
@@ -79,16 +93,13 @@ const validateMergeRules = () => {
       const fromMatch = new RegExp(rule.from).test(from);
       const toMatch = new RegExp(rule.to).test(to);
       if (fromMatch && toMatch) {
-        console.error(`❌ 禁止将 "${from}" 合并到 "${to}"`);
+        console.error(`❌ ${config.messages.badMerge}`);
         process.exit(1);
       }
     }
-  } catch {
-    // 非 merge commit 忽略
-  }
+  } catch {}
 };
 
-// 主执行函数
 const runChecks = () => {
   const branch = getCurrentBranch();
   const commitMsg = getLastCommitMessage();

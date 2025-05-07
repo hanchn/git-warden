@@ -1,0 +1,23 @@
+{
+  "forceCommitFormat": true,
+  "commitFormat": "<type>(<scope>): <subject>",
+  "allowedTypes": ["feat", "fix", "docs", "test", "refactor", "chore"],
+  "branches": {
+    "main": "^master$",
+    "test": "^test(\\/.*)?$", 
+    "pre": "^pre(\\/.*)?$", 
+    "dev": "^dev\\/.+$"
+  },
+  "restrictMerge": [
+    { "from": "^test(\\/.*)?$", "to": "^master$" },
+    { "from": "^pre(\\/.*)?$", "to": "^master$" },
+    { "from": "^dev\\/.+$", "to": "^master$" }
+  ],
+  "messages": {
+    "emptyCommit": "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
+    "badFormat": "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject>",
+    "badType": "❌ commit 类型不在允许范围内，请使用以下类型之一：",
+    "badBranch": "❌ 当前分支不符合命名规范，具体规范如下：",
+    "badMerge": "❌ 禁止将该分支合并到目标分支，请检查合并策略"
+  }
+}
