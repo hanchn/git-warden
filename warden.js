@@ -1,23 +1,24 @@
-#!/usr/bin/env node
-console.log('🟢 执行的是最新 warden.js');
+// warden.js
+//#!/usr/bin/env node
 
 import fs from 'fs';
 import { execSync } from 'child_process';
+import inquirer from 'inquirer';
 
 const defaultConfig = {
   forceCommitFormat: true,
   commitFormat: "<type>(<scope>): <subject>",
-  allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore"],
+  allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore", "work"],
   branches: {
     main: "^master$",
-    test: "^test(\\/.*)?$",
-    pre: "^pre(\\/.*)?$",
-    dev: "^dev\\/.+$" // 禁止裸 dev
+    test: "^test(\/.*)?$",
+    pre: "^pre(\/.*)?$",
+    dev: "^dev\/.+$"
   },
   restrictMerge: [
-    { from: "^test(\\/.*)?$", to: "^master$" },
-    { from: "^pre(\\/.*)?$", to: "^master$" },
-    { from: "^dev\\/.+$", to: "^master$" }
+    { "from": "^test(\/.*)?$", "to": "^master$" },
+    { "from": "^pre(\/.*)?$", "to": "^master$" },
+    { "from": "^dev\/.+$", "to": "^master$" }
   ],
   messages: {
     emptyCommit: "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
@@ -40,9 +41,8 @@ const getCurrentBranch = () => {
 
 const getLastCommitMessage = () => {
   try {
-    return execSync('git log -1 --pretty=%B').toString().trim();
+    return fs.readFileSync('.git/COMMIT_EDITMSG', 'utf8').trim();
   } catch {
-    console.warn('⚠️ 当前分支尚无提交，跳过 commit message 校验');
     return '';
   }
 };
@@ -65,14 +65,7 @@ const validateCommitMessage = (msg) => {
   if (!config.forceCommitFormat || !msg) return;
 
   const trimmed = msg.trim();
-  // 调试输出
-  console.log('commit message:', trimmed);
-  console.log('hasMeaningfulChar:', [...trimmed].some(char => /[a-zA-Z0-9\u4e00-\u9fa5]/.test(char)));
-
-  // 至少包含一个字母、数字或中文字符
-  const hasMeaningfulChar = [...trimmed].some(char =>
-    /[a-zA-Z0-9\u4e00-\u9fa5]/.test(char)
-  );
+  const hasMeaningfulChar = [...trimmed].some(char => /[a-zA-Z0-9\u4e00-\u9fa5]/.test(char));
 
   if (!trimmed || !hasMeaningfulChar) {
     console.error(`❌ ${config.messages.emptyCommit}`);
@@ -112,17 +105,42 @@ const validateMergeRules = () => {
   } catch {}
 };
 
-// 新增：优先从参数读取 commit message 文件内容
-const commitMsgFile = process.argv[2];
-let commitMsg = '';
-if (commitMsgFile && fs.existsSync(commitMsgFile)) {
-  commitMsg = fs.readFileSync(commitMsgFile, 'utf8');
-} else {
-  commitMsg = getLastCommitMessage();
-}
+const promptCommit = async () => {
+  const { type, scope, subject } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'type',
+      message: '请选择提交类型：',
+      choices: config.allowedTypes
+    },
+    {
+      type: 'input',
+      name: 'scope',
+      message: '请输入作用域（例如 login、user、api）：'
+    },
+    {
+      type: 'input',
+      name: 'subject',
+      message: '请输入提交说明：',
+      validate: input => /[a-zA-Z0-9\u4e00-\u9fa5]/.test(input) || '提交说明不能为空且必须包含文字'
+    }
+  ]);
 
-const runChecks = () => {
+  const fullCommit = `${type}${scope ? `(${scope})` : ''}: ${subject}`;
+  fs.writeFileSync('.git/COMMIT_EDITMSG', fullCommit);
+  console.log(`✨ 已生成提交信息：\n${fullCommit}`);
+};
+
+const runChecks = async () => {
+  const args = process.argv.slice(2);
+  if (args.includes('--prompt')) {
+    await promptCommit();
+    return;
+  }
+
   const branch = getCurrentBranch();
+  const commitMsg = getLastCommitMessage();
+
   validateBranchName(branch);
   validateCommitMessage(commitMsg);
   validateMergeRules();

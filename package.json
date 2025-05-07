@@ -6,12 +6,13 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "warden": "node warden.js",
+    "warden": "node warden.js --prompt",
     "prepare": "husky install"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "husky": "^8.0.3"
+    "husky": "^8.0.3",
+    "inquirer": "^9.2.12"
   }
 }
