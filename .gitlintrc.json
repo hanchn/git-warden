@@ -1,23 +1,31 @@
 {
   "forceCommitFormat": true,
   "commitFormat": "<type>(<scope>): <subject>",
-  "allowedTypes": ["feat", "fix", "docs", "test", "refactor", "chore"],
+  "allowedTypes": [
+    "feat",    
+    "fix",    
+    "docs",   
+    "test",    
+    "refactor", 
+    "chore",   
+    "work"     
+  ],
   "branches": {
     "main": "^master$",
-    "test": "^test(\\/.*)?$",
-    "pre": "^pre(\\/.*)?$",
-    "dev": "^dev\\/.+$"
+    "test": "^test(\/.*)?$|^test$",
+    "pre": "^pre(\/.*)?$|^pre$",
+    "dev": "^dev(\/.*)?$|^dev$"
   },
   "restrictMerge": [
-    { "from": "^test(\\/.*)?$", "to": "^master$" },
-    { "from": "^pre(\\/.*)?$", "to": "^master$" },
-    { "from": "^dev\\/.+$", "to": "^master$" }
+    { "from": "^test(\/.*)?$|^test$", "to": "^master$" },
+    { "from": "^pre(\/.*)?$|^pre$", "to": "^master$" },
+    { "from": "^dev(\/.*)?$|^dev$", "to": "^master$" }
   ],
   "messages": {
     "emptyCommit": "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
-    "badFormat": "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject>",
-    "badType": "❌ commit 类型不在允许范围内，请使用以下类型之一：",
-    "badBranch": "❌ 当前分支不符合命名规范，具体规范如下：",
+    "badFormat": "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject> 或 <type>: <subject>\n例如：fix(login): 修复登录按钮样式",
+    "badType": "❌ commit 类型不在允许范围内，请使用以下类型之一：\n- feat: 新功能（如新增页面、功能）\n- fix: 修复 bug\n- docs: 修改文档\n- test: 添加/修改测试\n- refactor: 重构（不影响功能）\n- chore: 构建流程或工具变更\n- work: 临时开发提交（建议后续整理）",
+    "badBranch": "❌ 当前分支不符合命名规范，具体规范如下：\n- master 主分支：^master$\n- 开发分支：^dev$ 或 ^dev/xxx\n- 测试分支：^test$ 或 ^test/xxx\n- 预发布分支：^pre$ 或 ^pre/xxx",
     "badMerge": "❌ 禁止将该分支合并到目标分支，请检查合并策略"
   }
 }

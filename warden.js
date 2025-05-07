@@ -11,14 +11,14 @@ const defaultConfig = {
   allowedTypes: ["feat", "fix", "docs", "test", "refactor", "chore", "work"],
   branches: {
     main: "^master$",
-    test: "^test(\/.*)?$",
-    pre: "^pre(\/.*)?$",
-    dev: "^dev\/.+$"
+    test: "^test(\/.*)?$|^test$",
+    pre: "^pre(\/.*)?$|^pre$",
+    dev: "^dev(\/.*)?$|^dev$" // 允许 dev 和 dev/xxx
   },
   restrictMerge: [
-    { "from": "^test(\/.*)?$", "to": "^master$" },
-    { "from": "^pre(\/.*)?$", "to": "^master$" },
-    { "from": "^dev\/.+$", "to": "^master$" }
+    { "from": "^test(\/.*)?$|^test$", "to": "^master$" },
+    { "from": "^pre(\/.*)?$|^pre$", "to": "^master$" },
+    { "from": "^dev(\/.*)?$|^dev$", "to": "^master$" }
   ],
   messages: {
     emptyCommit: "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
