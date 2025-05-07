@@ -2,6 +2,7 @@
 
 > 🛡️ Git Warden：通过 `.gitlintrc.json` 配置自动约束 commit 格式、分支命名、合并行为。
 
+
 ---
 
 ## ✅ 1. 初始化项目（只做一次）
