@@ -22,8 +22,8 @@ const defaultConfig = {
   ],
   messages: {
     emptyCommit: "❌ commit 信息不能为空，且不能是纯符号，请填写有意义的提交内容",
-    badFormat: "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject> 或 <type>: <subject>",
-    badType: "❌ commit 类型不在允许范围内，请使用以下类型之一：",
+    badFormat: "❌ commit 信息格式错误，必须符合格式：<type>(<scope>): <subject> 或 <type>: <subject>\n例如：fix(login): 修复登录按钮样式",
+    badType: "❌ commit 类型不在允许范围内，请使用以下类型之一：\n- feat: 新功能（如新增页面、功能）\n- fix: 修复 bug\n- docs: 修改文档\n- test: 添加/修改测试\n- refactor: 重构（不影响功能）\n- chore: 构建流程或工具变更\n- work: 临时开发提交（建议后续整理）",
     badBranch: "❌ 当前分支不符合命名规范，具体规范如下：",
     badMerge: "❌ 禁止将该分支合并到目标分支，请检查合并策略"
   }
@@ -81,7 +81,7 @@ const validateCommitMessage = (msg) => {
 
   const type = match[1];
   if (!config.allowedTypes.includes(type)) {
-    console.error(`❌ ${config.messages.badType}${config.allowedTypes.join('、')}`);
+    console.error(`❌ ${config.messages.badType}`);
     process.exit(1);
   }
 };
